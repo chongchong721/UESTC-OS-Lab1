@@ -124,6 +124,7 @@ void command::cmd_cr(){
 void command::cmd_de(){
 	PCB* process = nullptr;
 	Init->get_PCB_by_name(Init, this->name, process);
+	process->delete_on_cascade(process,rcb);
 }
 
 void command::cmd_req(){
