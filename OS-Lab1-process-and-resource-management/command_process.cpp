@@ -79,25 +79,33 @@ void command::excecute() {
 	{
 	case init:
 		cmd_init();
+		dispatch();
 		break;
 	case cr:
 		cmd_cr();
+		dispatch();
 		break;
 	case de:
+		cmd_de();
+		dispatch();
 		break;
 	case req:
+		cmd_req();
+		dispatch();
 		break;
 	case rel:
+		cmd_rel();
+		dispatch();
 		break;
 	case to:
+		cmd_to();
 		break;
 	case lp:
 		break;
 	case lr:
 		break;
-	default:
-		break;
 	}
+	std::cout << running_process->get_name() << std::endl;
 }
 
 void command::cmd_init(){
@@ -124,7 +132,9 @@ void command::cmd_cr(){
 void command::cmd_de(){
 	PCB* process = nullptr;
 	Init->get_PCB_by_name(Init, this->name, process);
-	process->delete_on_cascade(process,rcb);
+	process->delete_on_cascade(rcb);
+	rcb->modify_blocklist();
+	return;
 }
 
 void command::cmd_req(){
@@ -133,11 +143,20 @@ void command::cmd_req(){
 }
 
 void command::cmd_rel(){
-
+	PCB* process = running_process;
+	rcb->release(process, this->name, this->num);
+	rcb->modify_blocklist();
+	return;
 }
 
 void command::cmd_to(){
-
+	PCB* process;
+	process = this->get_next_running_process(running_process->get_priority(), "to");
+	if (process != nullptr) {
+		running_process->move_to_readylist();
+		running_process = process;
+	}
+	return;
 }
 
 void command::cmd_lp(){
@@ -150,5 +169,105 @@ void command::cmd_lr(){
 
 
 void command::dispatch(){
+	PCB* process;
+	if (running_process == nullptr) {
+		process = this->get_next_running_process(-1,"normal"); //-1表示running_process为空
+	}
+	else {
+		process = this->get_next_running_process(running_process->get_priority(),"normal");
+		if (process == nullptr) {
+			process = running_process;
+		}
+	}
+	if (running_process != process && running_process != nullptr) {
+		running_process->move_to_readylist();
+		//将被调度进程移除队列的操作在get___函数中
+	}
+	running_process = process;
+	return;
+}
 
+PCB* command::get_next_running_process(int priority,std::string mode)
+{
+	PCB* process = nullptr;
+	if (mode == "normal") {
+		if (priority == -1) {
+			if (ready_list2.empty()) {
+				if (ready_list1.empty()) {
+					process = ready_list0[0];
+					ready_list0.erase(ready_list0.begin());
+				}
+				else {
+					process = ready_list1[0];
+					ready_list1.erase(ready_list1.begin());
+				}
+			}
+			else {
+				process = ready_list2[0];
+				ready_list2.erase(ready_list2.begin());
+			}
+			return process;
+		}
+		else {
+			if (priority == 1) {
+				if (!ready_list2.empty()) {
+					process = ready_list2[0];
+					ready_list2.erase(ready_list2.begin());
+				}
+			}
+			else if (priority == 0) {
+				if (!ready_list2.empty()) {
+					process = ready_list2[0];
+					ready_list2.erase(ready_list2.begin());
+				}
+				else {
+					if (!ready_list1.empty()) {
+						process = ready_list1[0];
+						ready_list1.erase(ready_list1.begin());
+					}
+				}
+			}
+			return process;
+		}
+	}
+	else if (mode == "to") {
+		if (priority == 2) {
+			if (!ready_list2.empty()) {
+				process = ready_list2[0];
+				ready_list2.erase(ready_list2.begin());
+			}
+		}
+		else if (priority == 1) {
+			if (!ready_list2.empty()) {
+				process = ready_list2[0];
+				ready_list2.erase(ready_list2.begin());
+			}
+			else {
+				if (!ready_list1.empty()) {
+					process = ready_list1[0];
+					ready_list1.erase(ready_list1.begin());
+				}
+			}
+		}
+		else if (priority == 0) {
+			if (!ready_list2.empty()) {
+				process = ready_list2[0];
+				ready_list2.erase(ready_list2.begin());
+			}
+			else {
+				if (!ready_list1.empty()) {
+					process = ready_list1[0];
+					ready_list1.erase(ready_list1.begin());
+				}
+				else {
+					if (!ready_list0.empty()) {
+						process = ready_list0[0];
+						ready_list0.erase(ready_list0.begin());
+					}
+				}
+			}
+		}
+		return process;
+	}
+	
 }

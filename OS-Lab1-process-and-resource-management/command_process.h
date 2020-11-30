@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include "PCB.h"
 #define INVALID 0xFFFFFFFF;
 void command_process(std::string);
 void split(std::string& std, std::vector<std::string>& store, std::string& c);
@@ -21,9 +22,11 @@ private:
 	void cmd_lp();
 	void cmd_lr();
 	void dispatch();
+	
 
 public:
 	command(std::vector<std::string>);
 	void excecute();
+	PCB* get_next_running_process(int, std::string); //从readylist中找到应该调度的进程
 
 };
