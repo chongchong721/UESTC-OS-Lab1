@@ -1,5 +1,6 @@
 #include "resource.h"
 
+//按照Ri资源有i个的规则分配资源
 resource::resource(int i){
 	switch (i) {
 	case 1:
@@ -48,7 +49,7 @@ int resource::get_num_occupied()
 void resource::add_to_waiting_list(std::pair<PCB*, int> p){
 	waiting_list.push_back(p);
 }
-
+//移出waiting_list
 void resource::move_from_waiting_list(PCB* process){
 	for (auto iterator = waiting_list.begin(); iterator != waiting_list.end();iterator++) {
 		if (iterator->first == process) {
@@ -61,22 +62,26 @@ void resource::move_from_waiting_list(PCB* process){
 
 //进程请求资源
 bool resource::require(PCB* process, int num){
+	//无法请求，资源数目不够，需要进程更改自己的resource_needed map 需要资源更改自己的waiting_list
 	if (this->num_remained < num) {
 		process->add_to_resource_needed(this->name, num);
 		std::pair<PCB*, int> temp(process, num);
 		waiting_list.push_back(temp);
 		return false;
 	}
+	//可以请求
 	else {
 		num_occupied += num;
 		num_remained -= num;
 		auto it = map_occupied.find(process->get_name());
+		//如果已经占有一定数目的资源，再次请求的话，只用更改资源数目即可，如果没有则insert到Map_occupied
 		if (it == map_occupied.end()) {
 			map_occupied.insert(std::pair<std::string, int>(process->get_name(), num));
 		}
 		else {
 			it->second += num;
 		}
+		//进程更改自己获取资源的map
 		process->add_to_resource_acquired(this->name, num);
 		return true;
 	}
@@ -89,7 +94,9 @@ void resource::release(PCB* process, int num){
 	occupied -= num;
 	this->num_occupied -= num;
 	this->num_remained += num;
+	//进程从自己的map中释放资源
 	process->release_from_resourcemap(this->name, num);
+	//如果进程全部释放了资源，则从资源的map_occupied中删除，否则更改数值
 	if (occupied == 0) {
 		map_occupied.erase(iterator);
 	}

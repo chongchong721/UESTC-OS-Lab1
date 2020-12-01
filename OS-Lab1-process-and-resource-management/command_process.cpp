@@ -7,6 +7,7 @@
 PCB* Init;
 RCB* rcb = new RCB();
 
+//按照string c分割字符串，存在vector中
 void split(std::string& str, std::vector<std::string>& store, std::string& c) {
 	std::string::size_type pos1, pos2;
 	pos2 = str.find(c);
@@ -21,6 +22,8 @@ void split(std::string& str, std::vector<std::string>& store, std::string& c) {
 	}
 
 }
+
+//处理字符串，转换为命令，并执行
 void command_process(std::string str) {
 	std::string space = " ";
 	std::vector<std::string> store_string;
@@ -105,17 +108,18 @@ void command::excecute() {
 	case lr:
 		break;
 	}
-	std::cout << running_process->get_name() << std::endl;
+	std::cout << running_process->get_name() << " ";
 }
 
+//初始进程
 void command::cmd_init(){
-	PCB* process = new PCB("init", this->num);
+	PCB* process = new PCB("init", 0);
 	Init = process;
 	process->set_parent(nullptr);
 	ready_list0.push_back(process);
 	return;
 }
-
+//创建进程
 void command::cmd_cr(){
 	PCB* process = new PCB(this->name, this->num);
 	process->set_parent(running_process);
@@ -124,16 +128,23 @@ void command::cmd_cr(){
 		ready_list1.push_back(process);
 	}
 	else if (this->num == 2) {
-		ready_list2.push_back(process);
+		ready_list2.push_back(process); 
 	}
 	return;
 }
-
+//删除
 void command::cmd_de(){
 	PCB* process = nullptr;
 	Init->get_PCB_by_name(Init, this->name, process);
+	//将进程从父亲的孩子vector中删除
+	for (auto iterator = process->parent->children.begin(); iterator != process->parent->children.end(); iterator++) {
+		if ((*iterator) == process) {
+			process->parent->children.erase(iterator);
+			break;
+		}
+	}
 	process->delete_on_cascade(rcb);
-	rcb->modify_blocklist();
+	//rcb->modify_blocklist(); 
 	return;
 }
 
@@ -152,6 +163,7 @@ void command::cmd_rel(){
 void command::cmd_to(){
 	PCB* process;
 	process = this->get_next_running_process(running_process->get_priority(), "to");
+	//如果返回nullptr 说明不改变running_process
 	if (process != nullptr) {
 		running_process->move_to_readylist();
 		running_process = process;
@@ -159,20 +171,24 @@ void command::cmd_to(){
 	return;
 }
 
+//待实现
 void command::cmd_lp(){
 
 }
-
+//待实现
 void command::cmd_lr(){
 
 }
 
-
+//调度命令
 void command::dispatch(){
-	PCB* process;
+	PCB* process = nullptr;
+	//如果running_process是空指针，只可能在req或者de命令时出现这种情况
 	if (running_process == nullptr) {
+		//参数传递-1 表示running_process为nptr
 		process = this->get_next_running_process(-1,"normal"); //-1表示running_process为空
 	}
+	//to rel cr命令的running_process都不为空
 	else {
 		process = this->get_next_running_process(running_process->get_priority(),"normal");
 		if (process == nullptr) {
@@ -187,10 +203,13 @@ void command::dispatch(){
 	return;
 }
 
+//根据队列，获取下一个应该调度的进程的指针
 PCB* command::get_next_running_process(int priority,std::string mode)
 {
 	PCB* process = nullptr;
+	//正常调度模式，同优先级无法打断
 	if (mode == "normal") {
+		//priority为-1的情况表示running_process为nullptr 只需要找到优先级最高的即可
 		if (priority == -1) {
 			if (ready_list2.empty()) {
 				if (ready_list1.empty()) {
@@ -208,6 +227,7 @@ PCB* command::get_next_running_process(int priority,std::string mode)
 			}
 			return process;
 		}
+		//running_process还有的情况，需要比较优先级
 		else {
 			if (priority == 1) {
 				if (!ready_list2.empty()) {
@@ -230,6 +250,7 @@ PCB* command::get_next_running_process(int priority,std::string mode)
 			return process;
 		}
 	}
+	//time out模式，同优先级可以打断
 	else if (mode == "to") {
 		if (priority == 2) {
 			if (!ready_list2.empty()) {
